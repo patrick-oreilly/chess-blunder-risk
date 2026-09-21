@@ -1,0 +1,3 @@
+Placeholder so this directory is tracked by git while it is empty.
+Reusable functions imported by the notebooks live here, so notebook cells stay
+focused on the analysis rather than on plumbing.

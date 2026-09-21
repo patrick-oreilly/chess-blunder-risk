@@ -1,0 +1,3 @@
+Placeholder so this directory is tracked by git while it is empty.
+Final report and figures. Generated PDFs and images are gitignored; regenerate
+them from the notebooks rather than committing binaries.

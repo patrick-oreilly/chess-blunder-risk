@@ -1,0 +1,31 @@
+# CT4101 Machine Learning Portfolio Project - chess-blunder-risk
+#
+# Install:  pip install -r requirements.txt
+#
+# NOTE: the brief requires the submitted workflow to run from these instructions alone and requires
+# package versions to be recorded. Pin exact versions before the first milestone submission:
+#
+#     pip freeze > requirements.txt
+#
+# The loose list below is the starting set; it is deliberately unpinned until the environment is
+# settled, because pinning guessed versions would be worse than pinning none.
+
+# --- data acquisition ---
+requests            # Chess.com Published-Data API
+python-chess        # PGN parsing, board state, legal-move counts
+
+# --- labelling ---
+stockfish           # wrapper around the locally installed Stockfish 16 binary
+
+# --- analysis ---
+pandas
+numpy
+
+# --- modelling ---
+scikit-learn
+
+# --- reporting ---
+matplotlib
+
+# --- notebooks ---
+jupyterlab

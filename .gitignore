@@ -1,0 +1,64 @@
+# CT4101 chess-blunder-risk - Python .gitignore
+#
+# The brief is explicit: do not commit virtual environments, passwords, API keys,
+# temporary files or large generated outputs.
+
+# --- virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- notebooks ---
+.ipynb_checkpoints/
+
+# --- secrets ---
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# --- data ---
+# The Chess.com Developer Terms do not permit redistribution, so raw and derived
+# data stay local. See data/README.md. Only the documentation is tracked.
+data/raw/
+data/interim/
+data/processed/
+data/*.pgn
+data/*.pgn.zst
+data/*.json
+data/*.csv
+data/*.parquet
+!data/README.md
+
+# --- generated outputs ---
+reports/*.pdf
+reports/*.png
+reports/*.svg
+*.html.bak
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --- submissions ---
+# Milestone submissions are handed in through Canvas as ZIPs, not committed here.
+# Publishing a submission draft in a public repo before it is marked invites copying,
+# so submissions/ is ignored even though the rest of the repo is public.
+submissions/
+
+# --- explicit exceptions: keep the documentation and the declaration tracked ---
+!data/README.md
+!ASSISTANCE.md

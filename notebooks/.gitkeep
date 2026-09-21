@@ -1,0 +1,6 @@
+Placeholder so this directory is tracked by git while it is empty.
+Convention: numbered notebooks in workflow order, e.g.
+01_data_acquisition.ipynb 02_data_audit.ipynb
+03_preprocessing.ipynb 04_baseline.ipynb
+05_modelling.ipynb 06_evaluation.ipynb
+Restart the kernel and run top to bottom before every submission.
