@@ -1,8 +1,7 @@
 # Chess Blunder Risk
 
 Can a machine learning model predict whether a player will make a major tactical blunder on their
-next move — and is "I blunder more when I think longer" really about thinking time, or about how
-hard the position was?
+next move?
 
 **CT4101 Machine Learning — Portfolio Project**
 Patrick O'Reilly — 23366866
@@ -12,11 +11,11 @@ Patrick O'Reilly — 23366866
 Binary classification: **will the next move be a blunder?**
 
 A blunder is defined as a move that drops the engine evaluation by **200 centipawns or more**
-(roughly two pawns). That threshold is a choice, not a fact — changing it changes every reported
+(roughly two pawns). That threshold is a choice, not a fact, changing it changes every reported
 figure, so it is stated up front rather than buried.
 
-The secondary question — whether thinking time still predicts blunders once position difficulty is
-accounted for — carries the most interpretation risk, because a naive reading of it suggests "play
+The secondary question whether thinking time still predicts blunders once position difficulty is
+accounted for carries the most interpretation risk, because a naive reading of it suggests "play
 faster", which is not advice this project supports.
 
 ## Data
@@ -25,7 +24,7 @@ faster", which is not advice this project supports.
 Stockfish 16. Approximately 250,000 board positions.
 
 Source, licence and preparation steps are in [`data/README.md`](data/README.md). **The raw data is not
-committed to this repository** — see that file for why.
+committed to this repository**, see that file for why.
 
 ## Repository layout
 
@@ -37,17 +36,6 @@ committed to this repository** — see that file for why.
 | `reports/`      | Final report and figures                                                     |
 | `ASSISTANCE.md` | Declaration of external code, collaboration, generative AI and assistant use |
 
-## Setup
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Exact package versions are recorded in `requirements.txt` once the environment is finalised
-(`pip freeze`). The brief requires the submitted workflow to run from these instructions alone, so
-this section is verified by recreating the environment from a clean session before each milestone.
 
 ## Milestones
 
@@ -58,8 +46,6 @@ this section is verified by recreating the environment from a clean session befo
 | 3. Model comparison  | End of Week 10 | Baseline vs ≥2 learned models, plus error analysis                  |
 | 4. Final portfolio   | End of Week 12 | Code, 3,000-word report, README, demo video, assistance declaration |
 
-Each milestone costs 4 marks if missed.
-
 ## Status
 
-Scaffold only — no pipeline code exists yet. See the milestone table above for what lands when.
+Scaffold only at the moment
