@@ -15,7 +15,7 @@ requests            # Chess.com Published-Data API
 python-chess        # PGN parsing, board state, legal-move counts
 
 # --- labelling ---
-stockfish           # wrapper around the locally installed Stockfish 16 binary
+stockfish           # wrapper around the locally installed Stockfish 19 binary
 
 # --- analysis ---
 pandas

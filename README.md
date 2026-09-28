@@ -21,7 +21,7 @@ faster", which is not advice this project supports.
 ## Data
 
 ~4,300 of my own online matches from the free Chess.com Published-Data API, labelled locally with
-Stockfish 16. Approximately 250,000 board positions.
+Stockfish 19. Approximately 250,000 board positions.
 
 Source, licence and preparation steps are in [`data/README.md`](data/README.md). **The raw data is not
 committed to this repository**, see that file for why.
@@ -35,7 +35,6 @@ committed to this repository**, see that file for why.
 | `data/`         | Dataset documentation and (untracked) local data                             |
 | `reports/`      | Final report and figures                                                     |
 | `ASSISTANCE.md` | Declaration of external code, collaboration, generative AI and assistant use |
-
 
 ## Milestones
 

@@ -20,6 +20,25 @@ Keep this file updated as you go. Reconstructing it at the end is the failure mo
 **Action for the author:** review the rows above, correct anything inaccurate, and describe how each
 piece of assisted work was checked. A blank "Verified by" column is an unfinished declaration.
 
+## External code and tools
+
+The brief asks for external code to be declared alongside AI assistance. The target variable is
+produced by a third-party engine, so the components that shape the results are listed here.
+
+| Component                | Version | Licence      | Role                                             |
+| ------------------------ | ------- | ------------ | ------------------------------------------------ |
+| Stockfish                | 19      | GPL-3.0-only | Engine evaluations that define the blunder label |
+| python-chess             | 1.11.2  | GPL-3.0+     | PGN parsing, board state, legal-move counts      |
+| stockfish (PyPI wrapper) | 5.2.0   | MIT          | Python interface to the engine binary            |
+| scikit-learn             | 1.9.1   | BSD-3-Clause | Models and metrics                               |
+| pandas                   | 3.0.6   | BSD-3-Clause | Tabular data handling                            |
+| numpy                    | 2.5.3   | BSD-3-Clause | Numerical operations                             |
+
+The Stockfish binary is installed with Homebrew and pinned (`brew pin stockfish`) so it cannot
+upgrade part-way through the project and silently change the labels. Python package versions are
+recorded in `requirements.txt`; the engine path and evaluation settings are recorded in
+`data/README.md`.
+
 ## What still needs deciding
 
 - Whether the Milestone 1 proposal belongs in this public repository at all (see the note in the
