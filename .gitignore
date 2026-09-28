@@ -59,6 +59,11 @@ Thumbs.db
 # so submissions/ is ignored even though the rest of the repo is public.
 submissions/
 
+# --- working notes ---
+# .agents/ holds the module brief PDF (teaching material, not mine to redistribute)
+# alongside an editable copy of the proposal draft. Local reference only.
+.agents/
+
 # --- explicit exceptions: keep the documentation and the declaration tracked ---
 !data/README.md
 !ASSISTANCE.md
