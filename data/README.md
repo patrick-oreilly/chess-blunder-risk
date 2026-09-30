@@ -6,7 +6,9 @@ My own online chess matches, retrieved from my personal Chess.com account using 
 **Published-Data API**. No scraping, no third-party dataset, no other players' games.
 
 The account holds **4,373 games across 46 monthly archives**, spanning `2022/10` to `2026/09`.
-Filtering to the scope below leaves **4,013 rapid games**, which is the working dataset.
+Filtering to the scope below leaves **4,010 rapid games**, and dropping two games that were
+abandoned before the first move leaves **4,008** — the working dataset. Those games contain
+**260,030 plies**, so roughly 260,000 board positions to label.
 
 ## Scope
 
@@ -19,27 +21,38 @@ real totals from the account, not estimates:
 - **Daily and correspondence (308)** — a different regime, measured in hours and days rather than
   seconds. Their `%clk` field also records elapsed think time rather than a countdown, so the
   "seconds remaining" feature does not exist for them. See _Clock data_ below.
-- **Unrated games (5)** — casually arranged or against the computer, so rating difference is
-  meaningless.
+- **Unrated games (5)** — across all the classes above; casually arranged or against the computer, so
+  rating difference is meaningless.
 - **Variants such as Chess960 (2)** — the starting position changes the board state and the
   legal-move counts the features rely on.
-- **Unfinished and aborted games** — no complete move sequence to label.
+- **Abandoned before the first move (2)** — headers only, no moves to label. Identified by a PGN
+  that parses to zero plies.
 
-The rapid games are themselves highly concentrated: **3,876 of the 4,013 are 10-minute (600s)
-games**, with the remainder at 900+10 (94), 1800 (40), 3600 (2) and 1200 (1). A near-single time
+The working dataset is concentrated by time control as well: **3,872 of the 4,008 games are
+10-minute (600s)**, with the remainder at 900+10 (94), 1800 (40) and 3600 (2). A near-single time
 control is a strength here — the clock features are comparable across the dataset rather than being
 confounded with the time control.
 
 ### Clock data
 
-Per-move clock comments (`%clk`) are present in **4,011 of the 4,013 rapid games** (99.95%). In a
-rapid game the comment is a genuine countdown — a 10-minute game opens at `0:09:56.3` and falls
-monotonically — so time spent on a move is the drop from the previous comment for the same colour.
-That is the feature the secondary question depends on.
+All **4,008** in-scope games carry a `%clk` comment on every ply — the number of clock comments
+equals the ply count in every single game, with no exceptions. Time spent on a move is therefore
+computable everywhere, so the secondary question is answerable across the whole dataset rather than
+a subset of it.
+
+The only rapid games without clock data were also the only two with no moves: both were abandoned
+before the first move, and are excluded for having nothing to label.
 
 Daily games also carry `%clk`, but it is not a countdown: values rise and fall (`0:00:40`,
-`0:22:50`, `0:01:16`) because the field records elapsed thinking time instead. This is a second
-reason to exclude them, beyond the difference in regime.
+`0:22:50`, `0:01:16`) because the field records elapsed thinking time instead. That is a second
+reason for excluding them, beyond the difference in regime.
+
+### Game length
+
+Plies per game run from **1 to 206**, with a median of 61. The distribution has a real short tail:
+51 games are under 10 plies and 198 are under 20, almost all early resignations rather than broken
+records. Those games carry very little positional context, so `games_index.csv` keeps a ply count
+per game and the analysis can test whether they matter instead of dropping them on a guess.
 
 ## Licence
 

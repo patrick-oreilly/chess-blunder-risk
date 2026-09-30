@@ -20,8 +20,8 @@ faster", which is not advice this project supports.
 
 ## Data
 
-4,373 games from my own Chess.com account via the free Published-Data API, filtered to 4,013 rated
-rapid games, labelled locally with Stockfish 19. Approximately 250,000 board positions.
+4,373 games from my own Chess.com account via the free Published-Data API, filtered to 4,008 usable
+rapid games, labelled locally with Stockfish 19. 260,030 plies, so roughly 260,000 board positions.
 
 Source, licence and preparation steps are in [`data/README.md`](data/README.md). **The raw data is not
 committed to this repository**, see that file for why.
