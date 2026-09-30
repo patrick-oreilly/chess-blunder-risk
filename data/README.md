@@ -2,27 +2,44 @@
 
 ## Source
 
-Approximately **4,300 of my own online chess matches**, retrieved from my personal Chess.com account
-using the free **Published-Data API**. No scraping, no third-party dataset, no other players' games.
+My own online chess matches, retrieved from my personal Chess.com account using the free
+**Published-Data API**. No scraping, no third-party dataset, no other players' games.
+
+The account holds **4,373 games across 46 monthly archives**, spanning `2022/10` to `2026/09`.
+Filtering to the scope below leaves **4,013 rapid games**, which is the working dataset.
 
 ## Scope
 
-Only **rated blitz** games of standard chess are used. Blitz is the only time control included, so
-the whole dataset is measured under one clock regime. What is excluded, and why:
+Only **rated rapid** games of standard chess are used. Everything else is excluded. These counts are
+real totals from the account, not estimates:
 
-- **Bullet and rapid** — bullet runs at roughly 1-3 seconds per move and rapid at 15+ minutes, so
-  mixing time controls would partly teach a model which control it is looking at rather than
-  anything about blunders. Blitz (3-14 minutes) is a far tighter regime.
-- **Games against the computer** — the rating-difference feature is meaningless against an engine.
-- **Daily and correspondence games** — they have no per-move clock, so they cannot answer the
-  secondary question about thinking time at all.
-- **Variants such as Chess960** — the starting position changes the board state and the legal-move
-  counts the features rely on.
+- **Bullet (11 games) and blitz (41)** — too few to support a separate conclusion, and mixing time
+  controls would partly teach a model which control it is looking at rather than anything about
+  blunders.
+- **Daily and correspondence (308)** — a different regime, measured in hours and days rather than
+  seconds. Their `%clk` field also records elapsed think time rather than a countdown, so the
+  "seconds remaining" feature does not exist for them. See _Clock data_ below.
+- **Unrated games (5)** — casually arranged or against the computer, so rating difference is
+  meaningless.
+- **Variants such as Chess960 (2)** — the starting position changes the board state and the
+  legal-move counts the features rely on.
 - **Unfinished and aborted games** — no complete move sequence to label.
 
-Restricting the data to blitz reduces the number of usable games below the ~4,300 total on the
-account. The counts quoted in the proposal are therefore an upper bound until the acquisition
-notebook reports the real figures.
+The rapid games are themselves highly concentrated: **3,876 of the 4,013 are 10-minute (600s)
+games**, with the remainder at 900+10 (94), 1800 (40), 3600 (2) and 1200 (1). A near-single time
+control is a strength here — the clock features are comparable across the dataset rather than being
+confounded with the time control.
+
+### Clock data
+
+Per-move clock comments (`%clk`) are present in **4,011 of the 4,013 rapid games** (99.95%). In a
+rapid game the comment is a genuine countdown — a 10-minute game opens at `0:09:56.3` and falls
+monotonically — so time spent on a move is the drop from the previous comment for the same colour.
+That is the feature the secondary question depends on.
+
+Daily games also carry `%clk`, but it is not a countdown: values rise and fall (`0:00:40`,
+`0:22:50`, `0:01:16`) because the field records elapsed thinking time instead. This is a second
+reason to exclude them, beyond the difference in regime.
 
 ## Licence
 
