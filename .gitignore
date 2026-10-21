@@ -29,8 +29,8 @@ __pycache__/
 *.p12
 
 # --- data ---
-# The Chess.com Developer Terms do not permit redistribution, so raw and derived
-# data stay local. See data/README.md. Only the documentation is tracked.
+# Raw and derived data are generated, large, and reproducible from the public API, so
+# they stay out of git. See data/README.md. Only the documentation is tracked.
 data/raw/
 data/interim/
 data/processed/
@@ -52,6 +52,7 @@ reports/*.svg
 Thumbs.db
 .idea/
 .vscode/
+.serena/
 
 # --- submissions ---
 # Milestone submissions are handed in through Canvas as ZIPs, not committed here.

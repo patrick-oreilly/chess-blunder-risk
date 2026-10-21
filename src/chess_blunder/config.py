@@ -21,3 +21,7 @@ USER_AGENT = "chess-blunder-risk/0.1 (CT4101 student project; patrickoreilly2)"
 TIME_CLASSES = ("rapid",)
 RULES = ("chess",)
 RATED_ONLY = True
+# The last calendar month in the dataset, as "YYYY-MM". The current month's
+# archive grows with every game played, so without a fixed end the dataset
+# would depend on the day the notebook was run.
+END_MONTH = "2026-09"

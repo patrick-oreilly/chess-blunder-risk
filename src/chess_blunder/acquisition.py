@@ -2,8 +2,8 @@
 
 Raw archives are cached as JSON under ``data/raw/`` so re-running the notebook
 does not re-fetch months that have already been downloaded. Nothing under
-``data/`` is committed - the Chess.com terms do not permit redistribution, so
-only the documentation in ``data/README.md`` is tracked.
+``data/`` is committed - it is generated and reproducible from the public API -
+so only the documentation in ``data/README.md`` is tracked.
 """
 
 from __future__ import annotations
@@ -42,10 +42,17 @@ def get_json(url: str, *, session: requests.Session | None = None, tries: int = 
     raise RuntimeError(f"gave up after {tries} attempts: {url}")
 
 
+def archive_month(url: str) -> str:
+    """``.../games/2026/09`` becomes ``"2026-09"``."""
+    year, month = url.rsplit("/", 2)[-2:]
+    return f"{year}-{month}"
+
+
 def list_archives(username: str = config.USERNAME, **kwargs) -> list[str]:
-    """Monthly archive URLs for a player, oldest first."""
+    """Monthly archive URLs for a player, oldest first, up to ``config.END_MONTH``."""
     url = f"{config.API_BASE}/{username}/games/archives"
-    return get_json(url, **kwargs)["archives"]
+    archives = get_json(url, **kwargs)["archives"]
+    return [archive for archive in archives if archive_month(archive) <= config.END_MONTH]
 
 
 def download_archives(
@@ -63,8 +70,8 @@ def download_archives(
     rows = []
 
     for url in archives:
-        year, month = url.rsplit("/", 2)[-2:]
-        path = raw_dir / f"{year}-{month}.json"
+        month = archive_month(url)
+        path = raw_dir / f"{month}.json"
         already_cached = path.exists()
 
         if already_cached:
@@ -76,7 +83,7 @@ def download_archives(
 
         rows.append(
             {
-                "month": f"{year}-{month}",
+                "month": month,
                 "games": len(payload.get("games", [])),
                 "fetched": not already_cached,
             }
@@ -86,9 +93,11 @@ def download_archives(
 
 
 def load_games(raw_dir: Path = config.RAW_DIR) -> list[dict]:
-    """Every game object across every cached archive."""
+    """Every game object across every cached archive up to ``config.END_MONTH``."""
     games: list[dict] = []
     for path in sorted(raw_dir.glob("*.json")):
+        if path.stem > config.END_MONTH:
+            continue
         games.extend(json.loads(path.read_text()).get("games", []))
     return games
 

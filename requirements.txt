@@ -1,31 +1,28 @@
 # CT4101 Machine Learning Portfolio Project - chess-blunder-risk
 #
-# Install:  pip install -r requirements.txt
+# Install:  pip install -r requirements.txt   (Python 3.13)
 #
-# NOTE: the brief requires the submitted workflow to run from these instructions alone and requires
-# package versions to be recorded. Pin exact versions before the first milestone submission:
+# Direct dependencies, pinned to the versions the work was run with. A full `pip freeze` would
+# also pin macOS-only transitive packages (appnope and similar) and break the install elsewhere,
+# so only the packages the project imports are listed; pip resolves the rest.
 #
-#     pip freeze > requirements.txt
-#
-# The loose list below is the starting set; it is deliberately unpinned until the environment is
-# settled, because pinning guessed versions would be worse than pinning none.
+# Stockfish 19 itself is a system binary, not a Python package: see README.md.
 
 # --- data acquisition ---
-requests            # Chess.com Published-Data API
-python-chess        # PGN parsing, board state, legal-move counts
-
-# --- labelling ---
-stockfish           # wrapper around the locally installed Stockfish 19 binary
+requests==2.34.2        # Chess.com Published-Data API
+chess==1.11.2           # python-chess: PGN parsing, board state, driving the Stockfish binary
 
 # --- analysis ---
-pandas
-numpy
+pandas==3.0.6
+numpy==2.5.3
+pyarrow==25.0.1         # parquet, for the per-position table
 
 # --- modelling ---
-scikit-learn
+scikit-learn==1.9.1
 
 # --- reporting ---
-matplotlib
+matplotlib==3.11.2
 
 # --- notebooks ---
-jupyterlab
+jupyterlab==4.6.4
+ipykernel==7.3.0
