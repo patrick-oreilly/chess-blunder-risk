@@ -45,6 +45,7 @@ data/*.parquet
 reports/*.pdf
 reports/*.png
 reports/*.svg
+reports/figures/
 *.html.bak
 
 # --- OS / editor ---
@@ -64,6 +65,10 @@ submissions/
 # .agents/ holds the module brief PDF (teaching material, not mine to redistribute)
 # alongside an editable copy of the proposal draft. Local reference only.
 .agents/
+
+# --- tool output ---
+# Understand-Anything knowledge graph, fingerprints and scratch files: generated locally.
+.ua/
 
 # --- explicit exceptions: keep the documentation and the declaration tracked ---
 !data/README.md
