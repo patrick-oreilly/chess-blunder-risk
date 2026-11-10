@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
@@ -137,13 +138,18 @@ def out_of_fold(model, train: pd.DataFrame, folds) -> tuple[pd.DataFrame, np.nda
     Returns the scores, one row per fold, and the out-of-fold risk for every
     training row: each row's prediction comes from the one model that did not
     see its game. Plots and error analysis are built on these predictions.
+
+    Each fold also records ``train_pr_auc``, the model scored on the rows it was
+    fitted on. A large gap between that and the validation PR-AUC means the
+    model is memorising training games rather than learning what carries over.
     """
     rows, oof = [], np.zeros(len(train))
     for i, (fit_idx, val_idx) in enumerate(folds):
         fit, val = train.iloc[fit_idx], train.iloc[val_idx]
         model.fit(fit, fit[TARGET])
         oof[val_idx] = model.predict_proba(val)[:, 1]
-        rows.append({"fold": i, **score(val[TARGET], oof[val_idx])})
+        train_pr_auc = average_precision_score(fit[TARGET], model.predict_proba(fit)[:, 1])
+        rows.append({"fold": i, **score(val[TARGET], oof[val_idx]), "train_pr_auc": train_pr_auc})
     return pd.DataFrame(rows).set_index("fold"), oof
 
 
@@ -158,6 +164,7 @@ class TuningResult:
 
     results: pd.DataFrame  # one row per setting: its parameters, then mean and std of each metric
     best_params: dict
+    fold_scores: pd.DataFrame  # the winning setting's scores, one row per fold
     oof: np.ndarray  # out-of-fold risk from the winning setting
 
 
@@ -176,8 +183,18 @@ def tune(make_model, grid: dict, train: pd.DataFrame, folds) -> TuningResult:
         summary = scores.drop(columns="base_rate").agg(["mean", "std"])
         rows.append({**params, **{f"{s} {m}": summary.at[s, m] for m in summary.columns for s in summary.index}})
         if best is None or summary.at["mean", "pr_auc"] > best[0]:
-            best = (summary.at["mean", "pr_auc"], params, oof)
-    return TuningResult(pd.DataFrame(rows), best[1], best[2])
+            best = (summary.at["mean", "pr_auc"], params, scores, oof)
+    return TuningResult(pd.DataFrame(rows), *best[1:])
+
+
+def fold_differences(a: pd.DataFrame, b: pd.DataFrame, metric: str = "pr_auc") -> pd.DataFrame:
+    """Two models' fold scores side by side, with ``b - a`` for each fold.
+
+    Both models were scored on the same folds, so a fold that is hard for one
+    is hard for both; differencing fold by fold cancels that out. The rule set
+    in the notebook: ``b`` beats ``a`` only if it wins on every fold.
+    """
+    return pd.DataFrame({"a": a[metric], "b": b[metric], "b - a": b[metric] - a[metric]})
 
 
 def logistic_regression(C: float) -> Pipeline:
@@ -188,6 +205,24 @@ def logistic_regression(C: float) -> Pipeline:
     ranked, which is what PR-AUC measures.
     """
     return make_pipeline(make_preprocessor(spline=True), LogisticRegression(C=C, max_iter=1000))
+
+
+def gradient_boosting(max_iter: int, learning_rate: float, min_samples_leaf: int) -> Pipeline:
+    """Histogram gradient boosting behind the preprocessor, without scaling or splines.
+
+    Trees split on raw values, so they bend with curved effects by themselves.
+    Early stopping is off: its internal validation split picks rows at random,
+    not whole games, so it would check itself on games it has partly seen. The
+    number of trees is tuned on the grouped folds instead.
+    """
+    model = HistGradientBoostingClassifier(
+        max_iter=max_iter,
+        learning_rate=learning_rate,
+        min_samples_leaf=min_samples_leaf,
+        early_stopping=False,
+        random_state=SEED,
+    )
+    return make_pipeline(make_preprocessor(scale=False), model)
 
 
 class BaseRate:
