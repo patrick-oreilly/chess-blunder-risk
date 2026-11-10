@@ -8,14 +8,17 @@ the same rows, features, folds and metrics. The choices are justified in
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
-from sklearn.model_selection import GroupKFold
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.model_selection import GroupKFold, ParameterGrid
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import OneHotEncoder, SplineTransformer, StandardScaler
 
 from . import features
 
@@ -37,6 +40,12 @@ NUMERIC = [
     "tc_increment",
 ]
 CATEGORICAL = ["game_stage", "mover"]
+
+# The engine's view of the position. Blunder risk is near zero in decided
+# positions at either end and peaks where one side is clearly but not decisively
+# ahead, with a dip at dead level: a shape a linear model can only fit if these
+# columns are expanded into splines first.
+SPLINE = ["cp_before", "win_before"]
 
 LEAKAGE = [
     "seconds_spent",
@@ -84,22 +93,28 @@ def cv_folds(train: pd.DataFrame, n_folds: int = N_FOLDS, seed: int = SEED):
     return list(splitter.split(train, train[TARGET], groups=train.game_id))
 
 
-def make_preprocessor(scale: bool = True) -> ColumnTransformer:
+def make_preprocessor(scale: bool = True, spline: bool = False) -> ColumnTransformer:
     """Median-impute and scale the numeric columns, one-hot the categorical ones.
 
     Fitted inside each training fold, never on the full table, so the median
     and scaling statistics carry nothing from validation or test games. The only
     gap in the features is ``my_rating_pre`` for the first game in the dataset.
+
+    With ``spline``, the ``SPLINE`` columns become cubic splines with knots at
+    quantiles instead, so a linear model can bend with them. Tree models split
+    on raw values and do not need it.
     """
     numeric_steps = [SimpleImputer(strategy="median")]
     if scale:
         numeric_steps.append(StandardScaler())
-    return ColumnTransformer(
-        [
-            ("numeric", make_pipeline(*numeric_steps), NUMERIC),
-            ("categorical", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL),
-        ]
-    )
+    linear = [c for c in NUMERIC if not (spline and c in SPLINE)]
+    transformers = [
+        ("numeric", make_pipeline(*numeric_steps), linear),
+        ("categorical", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL),
+    ]
+    if spline:
+        transformers.append(("spline", SplineTransformer(n_knots=5, knots="quantile"), SPLINE))
+    return ColumnTransformer(transformers)
 
 
 def score(y_true, risk) -> dict:
@@ -116,14 +131,63 @@ def score(y_true, risk) -> dict:
     }
 
 
-def cross_validate(model, train: pd.DataFrame, folds) -> pd.DataFrame:
-    """Fit on each training fold, score on its validation fold; one row per fold."""
-    rows = []
+def out_of_fold(model, train: pd.DataFrame, folds) -> tuple[pd.DataFrame, np.ndarray]:
+    """Fit on each training fold, score on its validation fold.
+
+    Returns the scores, one row per fold, and the out-of-fold risk for every
+    training row: each row's prediction comes from the one model that did not
+    see its game. Plots and error analysis are built on these predictions.
+    """
+    rows, oof = [], np.zeros(len(train))
     for i, (fit_idx, val_idx) in enumerate(folds):
         fit, val = train.iloc[fit_idx], train.iloc[val_idx]
         model.fit(fit, fit[TARGET])
-        rows.append({"fold": i, **score(val[TARGET], model.predict_proba(val)[:, 1])})
-    return pd.DataFrame(rows).set_index("fold")
+        oof[val_idx] = model.predict_proba(val)[:, 1]
+        rows.append({"fold": i, **score(val[TARGET], oof[val_idx])})
+    return pd.DataFrame(rows).set_index("fold"), oof
+
+
+def cross_validate(model, train: pd.DataFrame, folds) -> pd.DataFrame:
+    """Fit on each training fold, score on its validation fold; one row per fold."""
+    return out_of_fold(model, train, folds)[0]
+
+
+@dataclass
+class TuningResult:
+    """What ``tune`` found: every setting's scores, the winner, and its predictions."""
+
+    results: pd.DataFrame  # one row per setting: its parameters, then mean and std of each metric
+    best_params: dict
+    oof: np.ndarray  # out-of-fold risk from the winning setting
+
+
+def tune(make_model, grid: dict, train: pd.DataFrame, folds) -> TuningResult:
+    """Cross-validate every setting in ``grid`` and keep the best by mean PR-AUC.
+
+    ``make_model`` builds a fresh model from keyword arguments; ``grid`` maps
+    each argument to the values to try. Only training rows come in, so the
+    test set plays no part in choosing a setting. The best mean wins outright:
+    with five folds, differences smaller than the fold std are noise, and the
+    results table shows them so they can be read that way.
+    """
+    rows, best = [], None
+    for params in ParameterGrid(grid):
+        scores, oof = out_of_fold(make_model(**params), train, folds)
+        summary = scores.drop(columns="base_rate").agg(["mean", "std"])
+        rows.append({**params, **{f"{s} {m}": summary.at[s, m] for m in summary.columns for s in summary.index}})
+        if best is None or summary.at["mean", "pr_auc"] > best[0]:
+            best = (summary.at["mean", "pr_auc"], params, oof)
+    return TuningResult(pd.DataFrame(rows), best[1], best[2])
+
+
+def logistic_regression(C: float) -> Pipeline:
+    """Logistic regression behind the spline preprocessor.
+
+    No class weights: reweighting would inflate every predicted risk and spoil
+    the Brier score and reliability plot, for little change in how moves are
+    ranked, which is what PR-AUC measures.
+    """
+    return make_pipeline(make_preprocessor(spline=True), LogisticRegression(C=C, max_iter=1000))
 
 
 class BaseRate:

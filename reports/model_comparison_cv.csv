@@ -1,0 +1,4 @@
+,pr_auc,roc_auc,brier
+base rate,0.094 ± 0.002,0.500 ± 0.000,0.085 ± 0.002
+stage x complexity,0.132 ± 0.003,0.638 ± 0.004,0.083 ± 0.002
+logistic regression,0.235 ± 0.010,0.783 ± 0.008,0.078 ± 0.001
