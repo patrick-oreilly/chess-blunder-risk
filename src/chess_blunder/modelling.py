@@ -13,7 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
@@ -220,6 +220,24 @@ def gradient_boosting(max_iter: int, learning_rate: float, min_samples_leaf: int
         learning_rate=learning_rate,
         min_samples_leaf=min_samples_leaf,
         early_stopping=False,
+        random_state=SEED,
+    )
+    return make_pipeline(make_preprocessor(scale=False), model)
+
+
+def random_forest(max_depth: int | None, min_samples_leaf: int) -> Pipeline:
+    """A random forest of 300 trees behind the same preprocessor as gradient boosting.
+
+    The number of trees is fixed: adding trees to a forest only averages away
+    more noise, it does not overfit. Each split considers the default random
+    subset of features (the square root of the column count). No class weights,
+    as for the other models.
+    """
+    model = RandomForestClassifier(
+        n_estimators=300,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+        n_jobs=-1,
         random_state=SEED,
     )
     return make_pipeline(make_preprocessor(scale=False), model)
