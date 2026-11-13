@@ -132,6 +132,25 @@ def score(y_true, risk) -> dict:
     }
 
 
+def bootstrap_pr_auc(y, risks: dict, groups, n: int = 1000, seed: int = SEED) -> pd.DataFrame:
+    """PR-AUC of each model on ``n`` resamples of the games; one row per resample.
+
+    Whole games are drawn with replacement, so a game's moves stay together,
+    for the same reason the folds are grouped. Every model is scored on the
+    same resampled games, so the difference between two models' columns is a
+    fair paired comparison.
+    """
+    y = np.asarray(y)
+    codes, games = pd.factorize(np.asarray(groups))
+    rows_of_game = [np.flatnonzero(codes == g) for g in range(len(games))]
+    rng = np.random.default_rng(seed)
+    rows = []
+    for _ in range(n):
+        idx = np.concatenate([rows_of_game[g] for g in rng.integers(0, len(games), len(games))])
+        rows.append({name: average_precision_score(y[idx], np.asarray(risk)[idx]) for name, risk in risks.items()})
+    return pd.DataFrame(rows)
+
+
 def out_of_fold(model, train: pd.DataFrame, folds) -> tuple[pd.DataFrame, np.ndarray]:
     """Fit on each training fold, score on its validation fold.
 
