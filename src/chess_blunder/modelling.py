@@ -48,6 +48,20 @@ CATEGORICAL = ["game_stage", "mover"]
 # columns are expanded into splines first.
 SPLINE = ["cp_before", "win_before"]
 
+# Features that carry overlapping information, shuffled together for permutation
+# importance. Shuffling one of a correlated pair alone understates both: the
+# model reads the same signal from the other.
+FEATURE_GROUPS = {
+    "engine evaluation": ["cp_before", "win_before"],
+    "material": ["pieces_white", "pieces_black", "material_diff"],
+    "game progress": ["ply", "game_stage"],
+    "legal moves": ["legal_moves"],
+    "clock": ["seconds_before"],
+    "time control": ["tc_base", "tc_increment"],
+    "rating": ["my_rating_pre"],
+    "colour": ["mover"],
+}
+
 LEAKAGE = [
     "seconds_spent",
     "seconds_remaining",
@@ -94,7 +108,7 @@ def cv_folds(train: pd.DataFrame, n_folds: int = N_FOLDS, seed: int = SEED):
     return list(splitter.split(train, train[TARGET], groups=train.game_id))
 
 
-def make_preprocessor(scale: bool = True, spline: bool = False) -> ColumnTransformer:
+def make_preprocessor(scale: bool = True, spline: bool = False, drop: tuple = ()) -> ColumnTransformer:
     """Median-impute and scale the numeric columns, one-hot the categorical ones.
 
     Fitted inside each training fold, never on the full table, so the median
@@ -103,15 +117,16 @@ def make_preprocessor(scale: bool = True, spline: bool = False) -> ColumnTransfo
 
     With ``spline``, the ``SPLINE`` columns become cubic splines with knots at
     quantiles instead, so a linear model can bend with them. Tree models split
-    on raw values and do not need it.
+    on raw values and do not need it. Columns in ``drop`` are left out, for
+    ablations.
     """
     numeric_steps = [SimpleImputer(strategy="median")]
     if scale:
         numeric_steps.append(StandardScaler())
-    linear = [c for c in NUMERIC if not (spline and c in SPLINE)]
+    linear = [c for c in NUMERIC if not (spline and c in SPLINE) and c not in drop]
     transformers = [
         ("numeric", make_pipeline(*numeric_steps), linear),
-        ("categorical", OneHotEncoder(handle_unknown="ignore"), CATEGORICAL),
+        ("categorical", OneHotEncoder(handle_unknown="ignore"), [c for c in CATEGORICAL if c not in drop]),
     ]
     if spline:
         transformers.append(("spline", SplineTransformer(n_knots=5, knots="quantile"), SPLINE))
@@ -216,6 +231,61 @@ def fold_differences(a: pd.DataFrame, b: pd.DataFrame, metric: str = "pr_auc") -
     return pd.DataFrame({"a": a[metric], "b": b[metric], "b - a": b[metric] - a[metric]})
 
 
+def grouped_permutation_importance(
+    model, train: pd.DataFrame, folds, groups: dict = FEATURE_GROUPS, n_repeats: int = 5, seed: int = SEED
+) -> pd.DataFrame:
+    """Drop in validation PR-AUC when each feature group is shuffled; one row per fold.
+
+    The model is fitted on each training fold, then each group's columns are
+    shuffled together in the validation fold (one shared permutation, so the
+    columns stay consistent with each other but lose their link to the target).
+    The drop is averaged over ``n_repeats`` shuffles. Only training games are
+    used, so the test set stays as it was.
+    """
+    rng = np.random.default_rng(seed)
+    rows = []
+    for fit_idx, val_idx in folds:
+        fit, val = train.iloc[fit_idx], train.iloc[val_idx]
+        model.fit(fit, fit[TARGET])
+        baseline = average_precision_score(val[TARGET], model.predict_proba(val)[:, 1])
+        row = {}
+        for name, columns in groups.items():
+            drops = []
+            for _ in range(n_repeats):
+                shuffled = val.copy()
+                shuffled[columns] = val[columns].to_numpy()[rng.permutation(len(val))]
+                drops.append(baseline - average_precision_score(val[TARGET], model.predict_proba(shuffled)[:, 1]))
+            row[name] = np.mean(drops)
+        rows.append(row)
+    return pd.DataFrame(rows).rename_axis("fold")
+
+
+def error_slices(y, risk, slices: pd.Series, top: float = 0.1) -> pd.DataFrame:
+    """How well the risk ranks moves within each slice of the data.
+
+    PR-AUC on its own is not comparable across slices with different blunder
+    rates, so each slice also gets its base rate and lift (PR-AUC divided by
+    the base rate). ``recall in top 10%`` flags the riskiest ``top`` share of
+    all moves, with one threshold for every slice, and asks what share of the
+    slice's blunders that catches.
+    """
+    y, risk = np.asarray(y), np.asarray(risk)
+    flagged = risk >= np.quantile(risk, 1 - top)
+    rows = {}
+    for label in slices.dropna().unique():
+        mask = (slices == label).to_numpy()
+        rows[label] = {
+            "moves": int(mask.sum()),
+            "base rate": y[mask].mean(),
+            "pr_auc": average_precision_score(y[mask], risk[mask]) if y[mask].any() else np.nan,
+            "recall in top 10%": flagged[mask & (y == 1)].mean() if y[mask].any() else np.nan,
+        }
+    table = pd.DataFrame(rows).T
+    table["lift"] = table["pr_auc"] / table["base rate"]
+    table["moves"] = table["moves"].astype(int)
+    return table.sort_index()
+
+
 def logistic_regression(C: float) -> Pipeline:
     """Logistic regression behind the spline preprocessor.
 
@@ -226,13 +296,14 @@ def logistic_regression(C: float) -> Pipeline:
     return make_pipeline(make_preprocessor(spline=True), LogisticRegression(C=C, max_iter=1000))
 
 
-def gradient_boosting(max_iter: int, learning_rate: float, min_samples_leaf: int) -> Pipeline:
+def gradient_boosting(max_iter: int, learning_rate: float, min_samples_leaf: int, drop: tuple = ()) -> Pipeline:
     """Histogram gradient boosting behind the preprocessor, without scaling or splines.
 
     Trees split on raw values, so they bend with curved effects by themselves.
     Early stopping is off: its internal validation split picks rows at random,
     not whole games, so it would check itself on games it has partly seen. The
-    number of trees is tuned on the grouped folds instead.
+    number of trees is tuned on the grouped folds instead. ``drop`` leaves
+    features out, for ablations.
     """
     model = HistGradientBoostingClassifier(
         max_iter=max_iter,
@@ -241,7 +312,7 @@ def gradient_boosting(max_iter: int, learning_rate: float, min_samples_leaf: int
         early_stopping=False,
         random_state=SEED,
     )
-    return make_pipeline(make_preprocessor(scale=False), model)
+    return make_pipeline(make_preprocessor(scale=False, drop=drop), model)
 
 
 def random_forest(max_depth: int | None, min_samples_leaf: int) -> Pipeline:
