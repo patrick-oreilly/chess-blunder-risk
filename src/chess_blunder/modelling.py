@@ -48,9 +48,8 @@ CATEGORICAL = ["game_stage", "mover"]
 # columns are expanded into splines first.
 SPLINE = ["cp_before", "win_before"]
 
-# Features that carry overlapping information, shuffled together for permutation
-# importance. Shuffling one of a correlated pair alone understates both: the
-# model reads the same signal from the other.
+# Related features, shuffled together for permutation importance (shuffling one
+# alone would let the model fall back on the other).
 FEATURE_GROUPS = {
     "engine evaluation": ["cp_before", "win_before"],
     "material": ["pieces_white", "pieces_black", "material_diff"],
@@ -148,12 +147,9 @@ def score(y_true, risk) -> dict:
 
 
 def bootstrap_pr_auc(y, risks: dict, groups, n: int = 1000, seed: int = SEED) -> pd.DataFrame:
-    """PR-AUC of each model on ``n`` resamples of the games; one row per resample.
+    """PR-AUC of each model on ``n`` resamples of whole games; one row per resample.
 
-    Whole games are drawn with replacement, so a game's moves stay together,
-    for the same reason the folds are grouped. Every model is scored on the
-    same resampled games, so the difference between two models' columns is a
-    fair paired comparison.
+    All models are scored on the same resamples, so their columns can be subtracted.
     """
     y = np.asarray(y)
     codes, games = pd.factorize(np.asarray(groups))
@@ -236,11 +232,7 @@ def grouped_permutation_importance(
 ) -> pd.DataFrame:
     """Drop in validation PR-AUC when each feature group is shuffled; one row per fold.
 
-    The model is fitted on each training fold, then each group's columns are
-    shuffled together in the validation fold (one shared permutation, so the
-    columns stay consistent with each other but lose their link to the target).
-    The drop is averaged over ``n_repeats`` shuffles. Only training games are
-    used, so the test set stays as it was.
+    A group's columns share one permutation. The drop is averaged over ``n_repeats`` shuffles.
     """
     rng = np.random.default_rng(seed)
     rows = []
@@ -261,13 +253,10 @@ def grouped_permutation_importance(
 
 
 def error_slices(y, risk, slices: pd.Series, top: float = 0.1) -> pd.DataFrame:
-    """How well the risk ranks moves within each slice of the data.
+    """Moves, base rate, PR-AUC and lift for each slice.
 
-    PR-AUC on its own is not comparable across slices with different blunder
-    rates, so each slice also gets its base rate and lift (PR-AUC divided by
-    the base rate). ``recall in top 10%`` flags the riskiest ``top`` share of
-    all moves, with one threshold for every slice, and asks what share of the
-    slice's blunders that catches.
+    ``recall in top 10%``: share of the slice's blunders that are in the riskiest
+    ``top`` share of all moves (one threshold for every slice).
     """
     y, risk = np.asarray(y), np.asarray(risk)
     flagged = risk >= np.quantile(risk, 1 - top)

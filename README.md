@@ -63,6 +63,18 @@ From the repository root, with the virtual environment active:
 3. **Audit the data**: run `notebooks/02_data_audit.ipynb`. Figures go to `reports/figures/`.
 4. **Preprocess and score the baselines**: run `notebooks/03_preprocessing_baseline.ipynb`. It
    writes `reports/baselines_cv.csv`.
+5. **Compare models**: run `notebooks/04_model_comparison.ipynb` (about 5 minutes on 10 cores). It
+   tunes the learned models, scores the test set once, and runs the error analysis. It writes
+   `reports/model_comparison_cv.csv`, `reports/model_comparison_test.csv` and the `04_` figures.
+
+To rerun a notebook from the command line instead of Jupyter:
+
+```bash
+cd notebooks && jupyter nbconvert --to notebook --execute --inplace 04_model_comparison.ipynb
+```
+
+Steps 1 and 2 only need running once. The Canvas submission includes `data/processed/`, so steps
+3 to 5 run straight away from it.
 
 ## Repository layout
 
@@ -85,20 +97,22 @@ From the repository root, with the virtual environment active:
 
 ## Status
 
-Milestone 2 (data and baseline) ready for submission:
+Repository: <https://github.com/patrick-oreilly/chess-blunder-risk>
 
-- `notebooks/02_data_audit.ipynb`: structural checks, missing values, the target and its
-  sensitivity to the threshold, blunder rate against each feature, drift over time, the leakage
-  audit and the evaluation design.
-- `notebooks/03_preprocessing_baseline.ipynb`: the modelling table (my 130,048 moves), the
-  time-based train/test split, grouped cross-validation folds, the preprocessor, and two baselines.
+Milestone 3 (model comparison) is in `notebooks/04_model_comparison.ipynb`: three learned models
+tuned on the same folds as the baselines, plots, the test set scored once, permutation importance,
+error analysis and a draft conclusion.
 
-Cross-validated baselines (5 grouped folds, training games only; the test set is held out until
-Milestone 3):
+Cross-validated on the training games (mean ± std over 5 grouped folds):
 
-| Baseline           | PR-AUC        | ROC-AUC       | Brier         |
-| ------------------ | ------------- | ------------- | ------------- |
-| Base rate          | 0.094 ± 0.002 | 0.500         | 0.085 ± 0.002 |
-| Stage × complexity | 0.132 ± 0.003 | 0.638 ± 0.004 | 0.083 ± 0.002 |
+| Model               | PR-AUC        | ROC-AUC       | Brier         | Chosen setting                           |
+| ------------------- | ------------- | ------------- | ------------- | ---------------------------------------- |
+| Base rate           | 0.094 ± 0.002 | 0.500         | 0.085 ± 0.002 |                                          |
+| Stage × complexity  | 0.132 ± 0.003 | 0.638 ± 0.004 | 0.083 ± 0.002 |                                          |
+| Logistic regression | 0.235 ± 0.010 | 0.783 ± 0.008 | 0.078 ± 0.001 | C = 10, splines on the engine evaluation |
+| Random forest       | 0.266 ± 0.012 | 0.817 ± 0.006 | 0.075 ± 0.001 | 300 trees, no depth limit, leaf 20       |
+| Gradient boosting   | 0.269 ± 0.015 | 0.818 ± 0.004 | 0.075 ± 0.001 | 100 trees, learning rate 0.05, leaf 20   |
 
-Next: Milestone 3, at least two learned models compared against these baselines, then error analysis.
+Best model: gradient boosting. Test set PR-AUC 0.237 (8.4% blunders in test vs 9.4% in training).
+
+Next: Milestone 4 (report, video, maybe some new position features).
