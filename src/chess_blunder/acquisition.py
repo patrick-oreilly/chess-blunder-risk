@@ -174,7 +174,6 @@ def _index_row(game: dict, username: str) -> dict:
         "colour": "white" if i_am_white else "black",
         "my_result": mine.get("result"),
         "my_rating": mine.get("rating"),
-        "opponent": theirs.get("username"),
         "opponent_rating": theirs.get("rating"),
         "rating_diff": (mine.get("rating") or 0) - (theirs.get("rating") or 0),
         "plies": ply_count(pgn),
