@@ -66,6 +66,8 @@ From the repository root, with the virtual environment active:
 5. **Compare models**: run `notebooks/04_model_comparison.ipynb` (about 5 minutes on 10 cores). It
    tunes the learned models, scores the test set once, and runs the error analysis. It writes
    `reports/model_comparison_cv.csv`, `reports/model_comparison_test.csv` and the `04_` figures.
+6. **Report figures**: run `notebooks/05_report_figures.ipynb` (a few seconds). It draws the cover
+   figure for the report and prints the report numbers the other notebooks don't show.
 
 To rerun a notebook from the command line instead of Jupyter:
 
@@ -74,7 +76,7 @@ cd notebooks && jupyter nbconvert --to notebook --execute --inplace 04_model_com
 ```
 
 Steps 1 and 2 only need running once. The Canvas submission includes `data/processed/`, so steps
-3 to 5 run straight away from it.
+3 to 6 run straight away from it.
 
 ## Repository layout
 
@@ -99,9 +101,8 @@ Steps 1 and 2 only need running once. The Canvas submission includes `data/proce
 
 Repository: <https://github.com/patrick-oreilly/chess-blunder-risk>
 
-Milestone 3 (model comparison) is in `notebooks/04_model_comparison.ipynb`: three learned models
-tuned on the same folds as the baselines, plots, the test set scored once, permutation importance,
-error analysis and a draft conclusion.
+Final portfolio (Milestone 4). The report is in `reports/`, the analysis in notebooks 02–04, and
+the report's extra figure and numbers in notebook 05.
 
 Cross-validated on the training games (mean ± std over 5 grouped folds):
 
@@ -113,6 +114,16 @@ Cross-validated on the training games (mean ± std over 5 grouped folds):
 | Random forest       | 0.266 ± 0.012 | 0.817 ± 0.006 | 0.075 ± 0.001 | 300 trees, no depth limit, leaf 20       |
 | Gradient boosting   | 0.269 ± 0.015 | 0.818 ± 0.004 | 0.075 ± 0.001 | 100 trees, learning rate 0.05, leaf 20   |
 
-Best model: gradient boosting. Test set PR-AUC 0.237 (8.4% blunders in test vs 9.4% in training).
+Scored once on the test set (the most recent 802 games), with 95% bootstrap intervals over games:
 
-Next: Milestone 4 (report, video, maybe some new position features).
+| Model               | PR-AUC | 95% interval | ROC-AUC | Lift |
+| ------------------- | ------ | ------------ | ------- | ---- |
+| Base rate           | 0.084  |              | 0.500   | 1.00 |
+| Stage × complexity  | 0.123  | 0.115–0.131  | 0.643   | 1.47 |
+| Logistic regression | 0.207  | 0.193–0.224  | 0.769   | 2.47 |
+| Random forest       | 0.226  | 0.212–0.242  | 0.799   | 2.70 |
+| Gradient boosting   | 0.237  | 0.222–0.255  | 0.804   | 2.84 |
+
+Best model: gradient boosting. Blunders are rarer in the test games (8.4% against 9.4% in
+training), so lift (PR-AUC divided by the base rate) is the fair comparison: 2.84 on test against
+2.86 in cross-validation.
