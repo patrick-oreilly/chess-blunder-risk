@@ -199,7 +199,7 @@ Two data-quality issues are known before any modelling and are handled by design
 
 ## Privacy
 
-The data contains only my own public game records. Opponents' Chess.com usernames appear only in
-the raw archives in `data/raw/`; the game index doesn't store them, and they are never used as
-features, committed or submitted. Nothing is committed, so there is no GDPR or confidentiality
+The data contains only my own public game records. Opponents' Chess.com usernames and the game
+links (which show them) appear only in the raw archives in `data/raw/`; the game index stores
+neither, and they are never used as features, committed or submitted. Nothing is committed, so there is no GDPR or confidentiality
 exposure.

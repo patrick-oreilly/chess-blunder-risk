@@ -164,7 +164,6 @@ def _index_row(game: dict, username: str) -> dict:
 
     return {
         "game_id": game.get("uuid"),
-        "url": game.get("url"),
         "end_time": pd.to_datetime(game.get("end_time"), unit="s", utc=True),
         "time_class": game.get("time_class"),
         "time_control": game.get("time_control"),
